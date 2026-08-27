@@ -1,0 +1,6 @@
+{
+  "name": "Nhà Thuốc Trực Tuyến - PharmaCare",
+  "description": "Website bán thuốc và dược phẩm trực tuyến với giao diện khách hàng mua sắm giỏ hàng và bảng quản trị Admin quản lý sản phẩm, đơn hàng",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
