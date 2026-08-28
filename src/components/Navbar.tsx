@@ -76,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="hidden sm:flex items-center gap-4 text-blue-50 text-xs">
               <a href="tel:18006868" className="hover:text-white flex items-center gap-1 font-medium transition-colors">
                 <PhoneCall className="w-3 h-3 text-amber-300" />
-                <span>Dược sĩ: <strong className="text-white">1800 6868</strong></span>
+                <span>Dược sĩ: <strong className="text-white">SĐT: 0386 626 187, Địa chỉ: Số 92, Ngõ 98, Nguyễn Hưởng Dung, Phường Thái Thụy, Hưng Yên</strong></span>
               </a>
             </div>
           </div>
