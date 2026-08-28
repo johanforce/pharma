@@ -103,10 +103,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                       <span>Nhà sản xuất: <strong>{product.manufacturer}</strong></span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0" />
-                    <span>Cam kết 100% thuốc chính hãng chuẩn GPP</span>
-                  </div>
                 </div>
               </div>
 

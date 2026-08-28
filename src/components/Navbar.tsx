@@ -43,14 +43,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Top Banner Notice */}
       <div className="bg-gradient-to-r from-blue-700 via-sky-600 to-teal-600 text-white text-xs py-1.5 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/20 text-white">
-              GPP CHUẨN BỘ Y TẾ
-            </span>
-            <span className="hidden sm:inline text-blue-50">
-              Nhà thuốc đạt chuẩn GPP - 100% Thuốc chính hãng có hóa đơn chứng từ
-            </span>
-          </div>
 
           {/* Server Status Indicator */}
           <div className="flex items-center gap-3">

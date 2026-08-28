@@ -100,10 +100,6 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(56,189,248,0.25),transparent_70%)]"></div>
         
         <div className="relative px-6 py-10 sm:px-12 sm:py-14 max-w-4xl space-y-5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-semibold text-sky-200">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>NHÀ THUỐC ĐẠT CHUẨN GPP TOÀN QUỐC</span>
-          </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
             Chăm Sóc Sức Khỏe Gia Đình <br className="hidden sm:inline" />
@@ -115,22 +111,6 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
           <p className="text-xs sm:text-sm text-blue-100/90 max-w-2xl leading-relaxed">
             Tra cứu và đặt mua hơn 1,000+ loại thuốc thiết yếu, kháng sinh, vitamin và thiết bị y tế chính hãng. Dược sĩ đại học hướng dẫn liều dùng và giao hàng nhanh trong 2 giờ.
           </p>
-
-          {/* Key Advantages */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
-            <div className="flex items-center gap-2 text-xs text-blue-100">
-              <CheckCircle2 className="w-4 h-4 text-teal-300 shrink-0" />
-              <span>100% Thuốc chính hãng</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-blue-100">
-              <CheckCircle2 className="w-4 h-4 text-teal-300 shrink-0" />
-              <span>Giao thuốc 2H tận nhà</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-blue-100">
-              <CheckCircle2 className="w-4 h-4 text-teal-300 shrink-0" />
-              <span>Dược sĩ tư vấn 24/7</span>
-            </div>
-          </div>
         </div>
       </section>
 
