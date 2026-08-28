@@ -203,7 +203,7 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
       </section>
 
       {/* Filters & Sorting Bar */}
-      <section className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+      <section className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         {/* Left: Active Filter Display */}
         <div className="flex items-center gap-2 text-xs">
           <span className="font-semibold text-slate-500">Đang lọc theo:</span>
@@ -218,7 +218,7 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
         </div>
 
         {/* Right: Sort & In-Stock Checkbox */}
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex w-full flex-wrap items-center gap-3 text-xs sm:w-auto sm:gap-4">
           <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 font-medium">
             <input
               type="checkbox"
@@ -229,13 +229,13 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
             <span>Chỉ xem thuốc còn hàng</span>
           </label>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-1.5">
             <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
             <select
               id="sort-by-select"
               value={sortBy}
               onChange={(e: any) => setSortBy(e.target.value)}
-              className="bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold py-1.5 px-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500"
+              className="min-w-0 max-w-full bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold py-1.5 px-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500"
             >
               <option value="default">Sắp xếp: Mặc định</option>
               <option value="price-asc">Giá: Thấp đến Cao</option>

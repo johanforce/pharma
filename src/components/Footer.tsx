@@ -24,6 +24,10 @@ export const Footer: React.FC<FooterProps> = ({ connectionStatus }) => {
                 <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                 <span>Số 92, Ngõ 98, Nguyễn Hưởng Dung, Phường Thái Thụy, Hưng Yên</span>
               </div>
+              <a href="tel:0386626187" className="flex items-center gap-2 hover:text-white transition-colors">
+                <PhoneCall className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                <span>0386 626 187</span>
+              </a>
             </div>
           </div>
         </div>
@@ -31,4 +35,3 @@ export const Footer: React.FC<FooterProps> = ({ connectionStatus }) => {
     </footer>
   );
 };
-
