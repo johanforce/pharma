@@ -359,7 +359,7 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
           className="flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all shrink-0"
         >
           <PhoneCall className="w-4 h-4 text-teal-300" />
-          <span>Gọi Dược Sĩ: 1800 6868</span>
+          <span>Gọi Dược Sĩ: 0386 626 187, Địa chỉ: Số 92, Ngõ 98, Nguyễn Hưởng Dung, Phường Thái Thụy, Hưng Yên</span>
         </a>
       </section>
 

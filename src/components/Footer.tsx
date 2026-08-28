@@ -22,7 +22,7 @@ export const Footer: React.FC<FooterProps> = ({ connectionStatus }) => {
             <div className="pt-2 text-xs text-slate-400 space-y-1.5">
               <div className="flex items-center gap-2">
                 <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                <span>Số 128 Hai Bà Trưng, Hà Nội</span>
+                <span>Số 92, Ngõ 98, Nguyễn Hưởng Dung, Phường Thái Thụy, Hưng Yên</span>
               </div>
             </div>
           </div>
