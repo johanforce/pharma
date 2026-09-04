@@ -1,6 +1,6 @@
 {
   "name": "PharmaCare - Dược Phẩm & Nhà Thuốc",
-  "description": "Tra cứu và đặt mua dược phẩm kết nối trực tiếp dữ liệu Google Sheets với hơn 8.200 loại thuốc, phân trang chuẩn 40 sản phẩm/trang.",
+  "description": "Tra cứu và đặt mua dược phẩm kết nối trực tiếp dữ liệu  với hơn 8.200 loại thuốc, phân trang chuẩn 40 sản phẩm/trang.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -20,7 +20,7 @@ export const Footer: React.FC<FooterProps> = ({ sheetMeta }) => {
                 <span className="text-lg font-bold text-white tracking-tight">PharmaCare</span>
               </div>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                Hệ thống cung ứng dược phẩm và chăm sóc sức khỏe trực tuyến, vận hành cơ sở dữ liệu đồng bộ trực tiếp với Google Sheets với hơn 8.200 danh mục thuốc đạt chuẩn.
+                Hệ thống cung ứng dược phẩm và chăm sóc sức khỏe trực tuyến, vận hành cơ sở dữ liệu đồng bộ trực tiếp với hơn 8.200 danh mục thuốc đạt chuẩn.
               </p>
               <div className="flex items-center gap-1.5 text-teal-400 text-[11px] font-medium pt-1">
                 <ShieldCheck className="w-4 h-4" />
@@ -42,24 +42,8 @@ export const Footer: React.FC<FooterProps> = ({ sheetMeta }) => {
                   <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
                   <span>Số 92, Ngõ 98, Nguyễn Hưởng Dung, Phường Thái Thụy, Hưng Yên</span>
                 </li>
-                <li className="flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                  <span>contact@pharmacare.vn</span>
-                </li>
               </ul>
             </div>
-
-            {/* Col 3: Cơ sở dữ liệu Google Sheets */}
-            <div className="space-y-3">
-              <h4 className="text-white font-bold text-sm tracking-wide flex items-center gap-1.5">
-                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                <span>Cơ sở dữ liệu Trang Tính</span>
-              </h4>
-              <p className="text-slate-400 text-[11px] leading-relaxed">
-                Ứng dụng quản lý danh mục thuốc trực tiếp từ Google Sheets, không dùng cơ sở dữ liệu trung gian, phân trang chuẩn 40 sản phẩm/trang.
-              </p>
-            </div>
-
             {/* Col 4: Cam kết chuyên môn */}
             <div className="space-y-3">
               <h4 className="text-white font-bold text-sm tracking-wide">Cam kết nhà thuốc</h4>
@@ -74,7 +58,7 @@ export const Footer: React.FC<FooterProps> = ({ sheetMeta }) => {
           {/* Bottom copyright */}
           <div className="pt-8 mt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-500 text-[11px]">
             <div>
-              © {new Date().getFullYear()} PharmaCare. Dữ liệu quản lý bởi Google Sheets (GID 1574232058).
+              © {new Date().getFullYear()} PharmaCare.
             </div>
             <div className="flex items-center gap-1">
               <span>Được xây dựng với</span>

@@ -353,7 +353,7 @@ function processCSVData(csvText: string): Product[] {
             stock,
             productUrl,
             imageUrl: imageUrl || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
-            description: `Sản phẩm ${name}, quy cách: ${packaging}. Phân phối chính hãng qua hệ thống PharmaCare từ kho Google Sheets trực tiếp.`,
+            description: `Sản phẩm ${name}, quy cách: ${packaging}. Phân phối chính hãng qua hệ thống PharmaCare từ kho trực tiếp.`,
             usage: `Dùng theo liều lượng ghi trên vỏ ${unit.toLowerCase()} hoặc tuân thủ hướng dẫn chi tiết của bác sĩ/dược sĩ chuyên khoa.`,
             requiresPrescription,
         });

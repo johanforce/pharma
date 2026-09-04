@@ -11,7 +11,8 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails }) => {
   const { addToCart } = useCart();
-  const isOutOfStock = product.stock <= 0;
+  const isOutOfStock = Boolean(product.isOutOfStock || product.stock <= 0);
+  const hasSpecificStock = Boolean(product.hasSpecificStock && !isOutOfStock);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -26,7 +27,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
       <div
           id={`product-card-${product.id}`}
           onClick={() => onViewDetails(product)}
-          className="group bg-white rounded-2xl border border-slate-200/90 hover:border-blue-400/80 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
+          className={`group bg-white rounded-2xl border transition-all duration-300 flex flex-col overflow-hidden cursor-pointer ${
+              isOutOfStock
+                  ? 'border-rose-200/80 shadow-xs opacity-95'
+                  : 'border-slate-200/90 hover:border-blue-400/80 shadow-xs hover:shadow-lg'
+          }`}
       >
         {/* Product Image & Badges */}
         <div className="relative aspect-4/3 bg-slate-100 overflow-hidden">
@@ -34,13 +39,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
               src={product.imageUrl}
               alt={product.name}
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className={`w-full h-full object-cover transition-transform duration-500 ${
+                  isOutOfStock ? 'grayscale-[35%]' : 'group-hover:scale-105'
+              }`}
               loading="lazy"
               onError={(e) => {
                 (e.target as HTMLImageElement).src =
                     'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80';
               }}
           />
+
+          {/* Out of Stock Overlay */}
+          {isOutOfStock && (
+              <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] flex items-center justify-center p-2">
+              <span className="px-3 py-1 bg-rose-600 text-white text-xs font-bold rounded-lg shadow-md border border-rose-400/40 flex items-center gap-1.5 uppercase tracking-wider">
+                <AlertCircle className="w-3.5 h-3.5" /> Hết hàng
+              </span>
+              </div>
+          )}
 
           {/* Top Badges */}
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 max-w-[70%]">
@@ -107,21 +123,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
               </span>
                 <span className="text-[10px] text-slate-400 ml-1">/ {product.unit}</span>
               </div>
+
+              {/* Stock View:
+                  - Nếu có chữ "Hết hàng" (hoặc số lượng = 0) -> view đỏ báo hết hàng
+                  - Nếu có số lượng cụ thể -> hiển thị view số lượng
+                  - Nếu không có -> coi như rất nhiều nên KHÔNG hiển thị view số lượng
+              */}
               <div className="text-right">
                 {isOutOfStock ? (
-                    <span className="text-[10px] font-medium text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded">
-                  Tạm hết
-                </span>
-                ) : (
-                    <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
-                  Còn {product.stock}
-                </span>
-                )}
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                    <AlertCircle className="w-2.5 h-2.5 text-rose-500" />
+                    Hết hàng
+                  </span>
+                ) : hasSpecificStock ? (
+                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded">
+                    Còn {product.stock} {product.unit}
+                  </span>
+                ) : null}
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5 pt-1">
               <button
                   id={`view-btn-${product.id}`}
                   type="button"
@@ -129,9 +152,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
                     e.stopPropagation();
                     onViewDetails(product);
                   }}
-                  className="flex items-center justify-center gap-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
+                  className="flex items-center justify-center gap-1 min-h-[36px] py-1.5 px-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
               >
-                <Eye className="w-3 h-3" />
+                <Eye className="w-3.5 h-3.5 text-slate-500" />
                 <span>Xem</span>
               </button>
               <button
@@ -139,13 +162,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
                   type="button"
                   disabled={isOutOfStock}
                   onClick={handleAddToCart}
-                  className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex items-center justify-center gap-1 min-h-[36px] py-1.5 px-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                       isOutOfStock
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs active:scale-95'
+                          ? 'bg-rose-50 text-rose-400 border border-rose-200 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-xs active:scale-95'
                   }`}
               >
-                <ShoppingBag className="w-3 h-3" />
+                <ShoppingBag className="w-3.5 h-3.5" />
                 <span>{isOutOfStock ? 'Hết hàng' : 'Thêm giỏ'}</span>
               </button>
             </div>

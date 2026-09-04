@@ -29,7 +29,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
 
   if (!product) return null;
 
-  const isOutOfStock = product.stock <= 0;
+  const isOutOfStock = Boolean(product.isOutOfStock || product.stock <= 0);
+  const hasSpecificStock = Boolean(product.hasSpecificStock && !isOutOfStock);
 
   const handleAddToCart = () => {
     if (!isOutOfStock) {
@@ -116,19 +117,31 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
 
                   {/* Stock & Prescription */}
                   <div className="space-y-2 text-xs text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>
-                      Tình trạng kho:{' '}
-                        {isOutOfStock ? (
-                            <strong className="text-rose-500">Tạm hết hàng</strong>
-                        ) : (
-                            <strong className="text-emerald-700">
-                              Còn hàng ({product.stock} {product.unit})
-                            </strong>
-                        )}
-                    </span>
-                    </div>
+                    {/*
+                      Quy tắc hiển thị:
+                      - Nếu có chữ "Hết hàng" (hoặc số lượng = 0) -> hiển thị view đỏ báo hết hàng
+                      - Nếu có số lượng cụ thể -> hiển thị view số lượng
+                      - Nếu không có -> coi như rất nhiều nên KHÔNG hiển thị view số lượng
+                    */}
+                    {isOutOfStock ? (
+                        <div className="flex items-center gap-2.5 p-3 bg-rose-50 rounded-xl border border-rose-200 text-rose-700">
+                          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                          <div>
+                            <div className="font-bold text-sm text-rose-700">Hết hàng</div>
+                            <div className="text-[11px] text-rose-600">Sản phẩm này hiện đang hết hàng tại kho.</div>
+                          </div>
+                        </div>
+                    ) : hasSpecificStock ? (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>
+                          Tình trạng kho:{' '}
+                            <strong className="text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200/80">
+                            Còn {product.stock} {product.unit}
+                          </strong>
+                        </span>
+                        </div>
+                    ) : null}
 
                     {product.requiresPrescription && (
                         <div className="flex items-center gap-2 text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
@@ -168,11 +181,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                             <Minus className="w-3.5 h-3.5" />
                           </button>
                           <span className="w-10 text-center font-bold text-sm text-slate-800">
-                        {quantity}
-                      </span>
+                            {quantity}
+                          </span>
                           <button
                               type="button"
-                              onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+                              onClick={() => setQuantity((q) => hasSpecificStock ? Math.min(product.stock, q + 1) : Math.min(999, q + 1))}
                               className="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
                           >
                             <Plus className="w-3.5 h-3.5" />
@@ -213,10 +226,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
           </div>
 
           {/* Footer Actions */}
-          <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+          <div className="p-3.5 sm:p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <a
                 href="tel:0386626187"
-                className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-blue-700 font-semibold"
+                className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-slate-600 hover:text-blue-700 font-semibold py-1"
             >
               <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
               <span>Tư vấn: 0386 626 187</span>
@@ -226,7 +239,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
               <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+                  className="px-3 sm:px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
               >
                 Đóng
               </button>
@@ -236,7 +249,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                         id="modal-add-cart-btn"
                         type="button"
                         onClick={handleAddToCart}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-blue-100 hover:bg-blue-200 text-blue-800 transition-colors cursor-pointer"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs font-semibold bg-blue-100 hover:bg-blue-200 text-blue-800 transition-colors cursor-pointer min-h-[40px]"
                     >
                       <ShoppingBag className="w-4 h-4" />
                       <span>Thêm giỏ</span>
@@ -245,7 +258,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                         id="modal-buy-now-btn"
                         type="button"
                         onClick={handleBuyNow}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-md shadow-blue-500/20 transition-all cursor-pointer min-h-[40px]"
                     >
                       <Zap className="w-4 h-4" />
                       <span>Mua ngay ({formatVND(product.price * quantity)})</span>
@@ -254,9 +267,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
               ) : (
                   <button
                       disabled
-                      className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-slate-200 text-slate-400 cursor-not-allowed"
+                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-500 border border-rose-200 cursor-not-allowed min-h-[40px]"
                   >
-                    Sản phẩm tạm hết hàng
+                    <AlertCircle className="w-4 h-4 text-rose-500" />
+                    <span>Sản phẩm hết hàng</span>
                   </button>
               )}
             </div>
