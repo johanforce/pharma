@@ -83,18 +83,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
                 <Pill className="w-5 h-5 -rotate-45" />
               </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xl font-bold tracking-tight text-slate-900">Pharma</span>
-                  <span className="text-xl font-bold tracking-tight text-blue-600">Care</span>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-teal-50 text-teal-700 font-semibold border border-teal-200 rounded">
-                  40 thuốc/trang
-                </span>
-                </div>
-                <p className="hidden md:block text-[11px] text-slate-500 -mt-0.5 font-medium">
-                  Cơ sở dữ liệu Google Sheets trực tiếp
-                </p>
-              </div>
             </div>
 
             {/* Search Bar */}

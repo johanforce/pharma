@@ -58,33 +58,6 @@ export const Footer: React.FC<FooterProps> = ({ sheetMeta }) => {
               <p className="text-slate-400 text-[11px] leading-relaxed">
                 Ứng dụng quản lý danh mục thuốc trực tiếp từ Google Sheets, không dùng cơ sở dữ liệu trung gian, phân trang chuẩn 40 sản phẩm/trang.
               </p>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/80 space-y-1.5 text-[11px]">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Trang tính:</span>
-                  <span className="font-mono text-emerald-300">data_pharma</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Bảng dữ liệu:</span>
-                  <span className="font-mono text-slate-200">TopThuoc_Data</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Số lượng thuốc:</span>
-                  <span className="font-bold text-white">
-                  {sheetMeta ? sheetMeta.totalProducts.toLocaleString('vi-VN') : '8.233'} loại
-                </span>
-                </div>
-                <div className="pt-1.5 border-t border-slate-700">
-                  <a
-                      href={sheetMeta?.sheetUrl || 'https://docs.google.com/spreadsheets/d/1IuAePO3lDxyhMX_SPCtNVRrAKvHwZVC4dsFFByY7To8/edit?gid=1574232058#gid=1574232058'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 font-semibold"
-                  >
-                    <span>Mở Google Sheets nguồn</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
             </div>
 
             {/* Col 4: Cam kết chuyên môn */}
@@ -93,7 +66,6 @@ export const Footer: React.FC<FooterProps> = ({ sheetMeta }) => {
               <ul className="space-y-2 text-slate-400 text-[11px]">
                 <li className="flex items-center gap-2">✓ Tư vấn đúng liều lượng chỉ định</li>
                 <li className="flex items-center gap-2">✓ Đóng gói kín đáo, giao thuốc nhanh</li>
-                <li className="flex items-center gap-2">✓ Phân trang rõ ràng 40 thuốc/trang</li>
                 <li className="flex items-center gap-2">✓ Cập nhật giá & hàng tồn theo thời gian thực</li>
               </ul>
             </div>

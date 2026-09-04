@@ -21,7 +21,7 @@ export const Pagination: React.FC<PaginationProps> = ({
     if (totalPages <= 1 && totalItems <= itemsPerPage) {
         return (
             <div className="flex items-center justify-between text-xs text-slate-500 py-4 px-2">
-                <span>Hiển thị tất cả <strong>{totalItems}</strong> loại thuốc (40 thuốc/trang)</span>
+                <span>Hiển thị tất cả <strong>{totalItems}</strong> loại thuốc</span>
                 <span>Trang 1 / 1</span>
             </div>
         );
@@ -74,14 +74,6 @@ export const Pagination: React.FC<PaginationProps> = ({
     return (
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-6 px-2 border-t border-slate-200">
             {/* Items info */}
-            <div className="text-xs text-slate-600 font-medium">
-                Hiển thị <strong className="text-slate-900">{startItem.toLocaleString('vi-VN')}</strong> –{' '}
-                <strong className="text-slate-900">{endItem.toLocaleString('vi-VN')}</strong> trong tổng số{' '}
-                <strong className="text-blue-700">{totalItems.toLocaleString('vi-VN')}</strong> loại thuốc
-                <span className="ml-2 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md font-semibold text-[11px] border border-blue-100">
-          40 thuốc/trang
-        </span>
-            </div>
 
             {/* Pagination controls */}
             <div className="flex flex-wrap items-center gap-1.5">
