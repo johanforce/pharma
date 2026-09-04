@@ -629,9 +629,8 @@ apiRouter.get('/orders', (req, res) => {
     });
 });
 
-// Mount at both /api and / so whether Vercel rewrites to /api or strips /api, it matches!
+// Mount at /api so all API endpoints are cleanly scoped
 app.use('/api', apiRouter);
-app.use('/', apiRouter);
 
 export { app, ensureDataLoaded };
 export default app;

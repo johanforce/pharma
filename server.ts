@@ -17,6 +17,24 @@ async function startServer() {
             server: { middlewareMode: true },
             appType: 'spa',
         });
+
+        // Handle direct stylesheet requests with proper text/css MIME type
+        app.get('/src/index.css', async (req, res, next) => {
+            const isCssRequest = req.headers.accept?.includes('text/css') || req.query.direct !== undefined;
+            if (isCssRequest) {
+                try {
+                    const result = await vite.transformRequest('/src/index.css?direct');
+                    if (result && result.code) {
+                        res.setHeader('Content-Type', 'text/css');
+                        return res.send(result.code);
+                    }
+                } catch (e) {
+                    console.error('[Vite] Error serving direct index.css:', e);
+                }
+            }
+            next();
+        });
+
         app.use(vite.middlewares);
     } else {
         const distPath = path.join(process.cwd(), 'dist');
