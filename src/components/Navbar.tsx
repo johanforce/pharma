@@ -22,7 +22,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
-        {/* Top Banner: Pharmacy Info & Google Sheets DB Status */}
         <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-teal-950 text-white text-xs py-2 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
             {/* Left: Hotline & Store Address */}
@@ -39,38 +38,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <MapPin className="w-3 h-3 text-rose-400 shrink-0" />
                 <span>Số 92, Ngõ 98, Nguyễn Hưởng Dung, Phường Thái Thụy, Hưng Yên</span>
               </div>
-            </div>
-
-            {/* Right: Google Sheets DB Status & Refresh Button */}
-            <div className="flex items-center gap-2 text-[11px] sm:text-xs">
-              <a
-                  href={sheetMeta?.sheetUrl || 'https://docs.google.com/spreadsheets/d/1IuAePO3lDxyhMX_SPCtNVRrAKvHwZVC4dsFFByY7To8/edit?gid=1574232058#gid=1574232058'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 transition-colors"
-                  title="Mở Google Sheets cơ sở dữ liệu gốc (Tab: TopThuoc_Data)"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="font-medium">Google Sheets DB</span>
-                {sheetMeta && (
-                    <span className="bg-emerald-500/20 text-emerald-200 px-1.5 py-0.2 rounded font-semibold text-[10px]">
-                  {sheetMeta.totalProducts.toLocaleString('vi-VN')} thuốc
-                </span>
-                )}
-                <ExternalLink className="w-3 h-3 text-emerald-400/80" />
-              </a>
-
-              <button
-                  id="refresh-sheet-btn"
-                  type="button"
-                  onClick={onRefreshData}
-                  disabled={isRefreshing}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-colors disabled:opacity-60 cursor-pointer"
-                  title="Cập nhật lại dữ liệu mới nhất từ Google Sheets"
-              >
-                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin text-teal-300' : ''}`} />
-                <span className="hidden md:inline">{isRefreshing ? 'Đang đồng bộ...' : 'Làm mới'}</span>
-              </button>
             </div>
           </div>
         </div>

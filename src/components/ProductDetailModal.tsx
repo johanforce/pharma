@@ -209,22 +209,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                   {product.usage} Bảo quản nơi khô ráo, thoáng mát, nhiệt độ dưới 30°C, tránh ánh nắng trực tiếp và xa tầm tay trẻ em.
                 </p>
               </div>
-
-              {/* Google Sheet Direct Reference Link */}
-              <div className="p-3 bg-teal-50/80 rounded-xl border border-teal-100 text-xs text-teal-900 flex items-center justify-between">
-              <span className="text-[11px]">
-                Nguồn bản ghi: <strong>Google Sheets Tab TopThuoc_Data</strong> (Dòng ID: {product.id})
-              </span>
-                <a
-                    href={`https://docs.google.com/spreadsheets/d/1IuAePO3lDxyhMX_SPCtNVRrAKvHwZVC4dsFFByY7To8/edit?gid=1574232058#gid=1574232058`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 hover:text-teal-900 underline"
-                >
-                  <span>Xem trên Sheets</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
             </div>
           </div>
 
