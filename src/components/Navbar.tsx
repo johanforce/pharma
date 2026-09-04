@@ -83,6 +83,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
                 <Pill className="w-5 h-5 -rotate-45" />
               </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xl font-bold tracking-tight text-slate-900">Pharma</span>
+                  <span className="text-xl font-bold tracking-tight text-blue-600">Care</span>
+                </span>
+                </div>
+              </div>
             </div>
 
             {/* Search Bar */}
