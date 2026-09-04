@@ -148,10 +148,6 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
                 </div>
                 <div className="text-[11px] text-teal-200 font-medium">Loại thuốc sẵn có</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 text-center min-w-[120px]">
-                <div className="text-xl sm:text-2xl font-black text-white">40</div>
-                <div className="text-[11px] text-teal-200 font-medium">Sản phẩm / Trang</div>
-              </div>
             </div>
           </div>
         </section>
