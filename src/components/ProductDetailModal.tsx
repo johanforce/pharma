@@ -27,6 +27,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
   const { addToCart, setIsCartOpen } = useCart();
   const [quantity, setQuantity] = useState(1);
 
+  console.log('ProductDetailModal - product data:', product);
+
   if (!product) return null;
 
   const isOutOfStock = Boolean(product.isOutOfStock || product.stock <= 0);
