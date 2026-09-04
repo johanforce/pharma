@@ -1,6 +1,6 @@
 {
-  "name": "Nhà Thuốc Trực Tuyến - PharmaCare",
-  "description": "Website bán thuốc và dược phẩm trực tuyến với giao diện khách hàng mua sắm giỏ hàng và bảng quản trị Admin quản lý sản phẩm, đơn hàng",
+  "name": "PharmaCare - Dược Phẩm & Nhà Thuốc",
+  "description": "Tra cứu và đặt mua dược phẩm kết nối trực tiếp dữ liệu Google Sheets với hơn 8.200 loại thuốc, phân trang chuẩn 40 sản phẩm/trang.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

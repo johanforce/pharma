@@ -14,8 +14,7 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
-
-const CART_STORAGE_KEY = 'pharmacare_cart_v1';
+const CART_STORAGE_KEY = 'pharmacare_sheet_cart_v1';
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -26,10 +25,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return [];
     }
   });
+
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    } catch (e) {
+      console.error('Failed to save cart to localStorage', e);
+    }
   }, [cart]);
 
   const addToCart = (product: Product, quantity = 1) => {
@@ -39,7 +43,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const updated = [...prevCart];
         updated[existingIndex] = {
           ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + quantity
+          quantity: updated[existingIndex].quantity + quantity,
         };
         return updated;
       } else {
@@ -58,36 +62,40 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
+        prevCart.map((item) =>
+            item.product.id === productId ? { ...item, quantity } : item
+        )
     );
   };
 
   const clearCart = () => {
     setCart([]);
-    localStorage.removeItem(CART_STORAGE_KEY);
+    try {
+      localStorage.removeItem(CART_STORAGE_KEY);
+    } catch (e) {
+      console.error('Failed to clear cart in localStorage', e);
+    }
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalAmount = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
   return (
-    <CartContext.Provider
-      value={{
-        cart,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        totalItems,
-        totalAmount,
-        isCartOpen,
-        setIsCartOpen
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+      <CartContext.Provider
+          value={{
+            cart,
+            addToCart,
+            removeFromCart,
+            updateQuantity,
+            clearCart,
+            totalItems,
+            totalAmount,
+            isCartOpen,
+            setIsCartOpen,
+          }}
+      >
+        {children}
+      </CartContext.Provider>
   );
 };
 
