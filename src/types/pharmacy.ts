@@ -1,11 +1,11 @@
 export interface Product {
   id: string; // ID e.g. "4780"
-  code: string; // Mã SP e.g. "T01963"
+  code?: string; // Mã SP e.g. "T01963"
   name: string; // Tên sản phẩm
-  packaging: string; // Quy cách đóng gói e.g. "Hộp 24 gói x 1.5g thuốc bột uống"
+  packaging?: string; // Quy cách đóng gói e.g. "Hộp 24 gói x 1.5g thuốc bột uống"
   unit: string; // Hộp, Lọ, Chai, Tuýp, Vỉ, Gói, etc.
   category: string; // Danh mục / Nhóm dược lý
-  tags: string[]; // Tags e.g. ["#Bán_chạy", "#Vui_tết"]
+  tags?: string[]; // Tags e.g. ["#Bán_chạy", "#Vui_tết"]
   price: number; // in VNĐ
   stock: number;
   productUrl?: string; // Link sản phẩm
@@ -13,6 +13,20 @@ export interface Product {
   usage?: string;
   description?: string;
   requiresPrescription?: boolean;
+  manufacturer?: string;
+  activeIngredient?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PharmacyCategory {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  iconName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CartItem {
@@ -30,7 +44,7 @@ export interface OrderItem {
   imageUrl?: string;
 }
 
-export type OrderStatus = 'mới' | 'đang xử lý' | 'đã xác nhận' | 'đang giao' | 'hoàn thành' | 'đã hủy';
+export type OrderStatus = 'mới' | 'đang xử lý' | 'đã xác nhận' | 'đang giao' | 'đã giao' | 'hoàn thành' | 'đã hủy';
 
 export interface Order {
   id: string;
@@ -41,7 +55,7 @@ export interface Order {
   paymentMethod: 'cod' | 'banking';
   items: OrderItem[];
   totalAmount: number;
-  shippingFee: number;
+  shippingFee?: number;
   status: OrderStatus;
   createdAt: string;
 }

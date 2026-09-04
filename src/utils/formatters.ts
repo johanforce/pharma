@@ -19,6 +19,8 @@ export function formatDate(dateStringOrTimestamp: string | number): string {
   }
 }
 
+export const formatDateVN = formatDate;
+
 export function normalizeVietnamese(str: string): string {
   if (!str) return '';
   return str

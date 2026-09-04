@@ -80,7 +80,10 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
       }
 
       const res = await fetch(`/api/products?${params.toString()}`);
-      if (!res.ok) throw new Error('Không thể tải dữ liệu');
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || !contentType.includes('application/json')) {
+        throw new Error(`API returned ${res.status}: non-json response`);
+      }
       const data: PaginatedProductsResponse = await res.json();
 
       setProducts(data.products || []);
