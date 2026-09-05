@@ -31,8 +31,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
 
   if (!product) return null;
 
-  const isOutOfStock = Boolean(product.isOutOfStock || product.stock <= 0);
-  const hasSpecificStock = Boolean(product.hasSpecificStock && !isOutOfStock);
+  const isOutOfStock = Boolean(product.isOutOfStock || (product.hasStockInfo && product.stock <= 0));
+  const hasSpecificStock = Boolean(product.hasSpecificStock && !isOutOfStock && product.stock > 0);
 
   const handleAddToCart = () => {
     if (!isOutOfStock) {
@@ -108,12 +108,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
 
                   {/* Price Display */}
                   <div className="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-100/80 mb-4">
-                    <div className="text-xs text-slate-500 mb-0.5">Giá niêm yết hệ thống:</div>
+                    <div className="text-xs text-slate-500 mb-0.5">Giá sản phẩm:</div>
                     <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-black text-blue-700">
-                      {formatVND(product.price)}
-                    </span>
-                      <span className="text-xs text-slate-500">/ {product.unit} (Đã gồm VAT)</span>
+                      {product.hasPrice && product.price > 0 ? (
+                          <>
+                          <span className="text-2xl font-black text-blue-700">
+                            {formatVND(product.price)}
+                          </span>
+                            <span className="text-xs text-slate-500">/ {product.unit} (Đã gồm VAT)</span>
+                          </>
+                      ) : (
+                          <span className="text-xl font-bold text-amber-800 bg-amber-100/80 px-3 py-1 rounded-xl border border-amber-200">
+                          Giá liên hệ
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -123,7 +131,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                       Quy tắc hiển thị:
                       - Nếu có chữ "Hết hàng" (hoặc số lượng = 0) -> hiển thị view đỏ báo hết hàng
                       - Nếu có số lượng cụ thể -> hiển thị view số lượng
-                      - Nếu không có -> coi như rất nhiều nên KHÔNG hiển thị view số lượng
+                      - Nếu không có thông tin -> KHÔNG hiển thị view số lượng
                     */}
                     {isOutOfStock ? (
                         <div className="flex items-center gap-2.5 p-3 bg-rose-50 rounded-xl border border-rose-200 text-rose-700">
@@ -135,13 +143,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                         </div>
                     ) : hasSpecificStock ? (
                         <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                           <span>
-                          Tình trạng kho:{' '}
-                            <strong className="text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200/80">
-                            Còn {product.stock} {product.unit}
-                          </strong>
-                        </span>
+                            Tình trạng kho:{' '}
+                            <strong className="text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80">
+                              Còn {product.stock} {product.unit}
+                            </strong>
+                          </span>
                         </div>
                     ) : null}
 
@@ -197,7 +205,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                       <div className="text-right text-xs text-slate-500">
                         Tạm tính:{' '}
                         <strong className="text-blue-700 text-sm">
-                          {formatVND(product.price * quantity)}
+                          {product.hasPrice && product.price > 0
+                              ? formatVND(product.price * quantity)
+                              : 'Giá liên hệ'}
                         </strong>
                       </div>
                     </div>
@@ -263,7 +273,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                         className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-md shadow-blue-500/20 transition-all cursor-pointer min-h-[40px]"
                     >
                       <Zap className="w-4 h-4" />
-                      <span>Mua ngay ({formatVND(product.price * quantity)})</span>
+                      <span>
+                        {product.hasPrice && product.price > 0
+                            ? `Mua ngay (${formatVND(product.price * quantity)})`
+                            : 'Đặt tư vấn / Đặt hàng'}
+                      </span>
                     </button>
                   </>
               ) : (

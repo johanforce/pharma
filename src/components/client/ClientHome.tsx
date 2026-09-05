@@ -40,6 +40,8 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedPackaging, setSelectedPackaging] = useState<string>('all');
+  const [stockFilter, setStockFilter] = useState<string>('all');
+  const [priceFilter, setPriceFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('default');
   const [currentPage, setCurrentPage] = useState<number>(1);
 
@@ -58,7 +60,7 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
   // Reset page to 1 when search or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedTag, selectedCategory, selectedPackaging, sortBy]);
+  }, [searchQuery, selectedTag, selectedCategory, selectedPackaging, stockFilter, priceFilter, sortBy]);
 
   // Fetch paginated products from /api/products
   const fetchProducts = async (page: number) => {
@@ -79,6 +81,12 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
       }
       if (selectedPackaging && selectedPackaging !== 'all') {
         params.set('packaging', selectedPackaging);
+      }
+      if (stockFilter && stockFilter !== 'all') {
+        params.set('stockFilter', stockFilter);
+      }
+      if (priceFilter && priceFilter !== 'all') {
+        params.set('priceFilter', priceFilter);
       }
       if (sortBy && sortBy !== 'default') {
         params.set('sort', sortBy);
@@ -106,7 +114,7 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
 
   useEffect(() => {
     fetchProducts(currentPage);
-  }, [currentPage, searchQuery, selectedTag, selectedCategory, selectedPackaging, sortBy, isRefreshing]);
+  }, [currentPage, searchQuery, selectedTag, selectedCategory, selectedPackaging, stockFilter, priceFilter, sortBy, isRefreshing]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -119,6 +127,8 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
     setSelectedTag('all');
     setSelectedCategory('all');
     setSelectedPackaging('all');
+    setStockFilter('all');
+    setPriceFilter('all');
     setSortBy('default');
     onSearchChange('');
     setCurrentPage(1);
@@ -128,6 +138,8 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
       selectedTag !== 'all' ||
       selectedCategory !== 'all' ||
       selectedPackaging !== 'all' ||
+      stockFilter !== 'all' ||
+      priceFilter !== 'all' ||
       sortBy !== 'default' ||
       searchQuery.trim().length > 0;
 
@@ -150,13 +162,29 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
             </div>
 
             {/* Quick Metrics */}
-            <div className="flex flex-row md:flex-col gap-2.5 sm:gap-3 shrink-0">
-              <div className="flex-1 md:flex-initial bg-white/10 backdrop-blur-md border border-white/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center min-w-[100px] sm:min-w-[120px]">
-                <div className="text-lg sm:text-2xl font-black text-white">
+            <div className="flex flex-wrap md:flex-col gap-2 shrink-0">
+              <div className="flex-1 md:flex-initial bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-2 sm:p-2.5 text-center min-w-[90px]">
+                <div className="text-base sm:text-xl font-black text-white">
                   {sheetMeta ? sheetMeta.totalProducts.toLocaleString('vi-VN') : '8.233'}
                 </div>
-                <div className="text-[10px] sm:text-[11px] text-teal-200 font-medium">Loại thuốc sẵn có</div>
+                <div className="text-[10px] text-teal-200 font-medium">Tổng thuốc</div>
               </div>
+              {sheetMeta && (
+                  <div className="flex gap-2">
+                    <div className="flex-1 bg-amber-500/20 backdrop-blur-md border border-amber-300/30 rounded-xl p-2 text-center min-w-[90px]">
+                      <div className="text-sm sm:text-base font-bold text-amber-200">
+                        {sheetMeta.contactPriceCount?.toLocaleString('vi-VN') || 0}
+                      </div>
+                      <div className="text-[9px] text-amber-100 font-medium">Giá liên hệ</div>
+                    </div>
+                    <div className="flex-1 bg-rose-500/20 backdrop-blur-md border border-rose-300/30 rounded-xl p-2 text-center min-w-[90px]">
+                      <div className="text-sm sm:text-base font-bold text-rose-200">
+                        {sheetMeta.outOfStockCount?.toLocaleString('vi-VN') || 0}
+                      </div>
+                      <div className="text-[9px] text-rose-100 font-medium">Hết hàng</div>
+                    </div>
+                  </div>
+              )}
             </div>
           </div>
         </section>
@@ -294,8 +322,39 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
             )}
           </div>
 
-          {/* Right: Packaging & Sort Dropdowns */}
+          {/* Right: Stock, Price, Packaging & Sort Dropdowns */}
           <div className="flex flex-wrap items-center gap-2 text-xs">
+            {/* Stock Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <select
+                  id="stock-filter"
+                  value={stockFilter}
+                  onChange={(e) => setStockFilter(e.target.value)}
+                  className="bg-transparent text-slate-800 text-xs font-semibold outline-none cursor-pointer"
+              >
+                <option value="all">Kho: Tất cả</option>
+                <option value="out_of_stock">Kho: Hết hàng (View đỏ)</option>
+                <option value="in_stock">Kho: Còn hàng</option>
+                <option value="no_info">Kho: Không thông tin</option>
+              </select>
+            </div>
+
+            {/* Price Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
+              <Tag className="w-3.5 h-3.5 text-blue-500" />
+              <select
+                  id="price-filter"
+                  value={priceFilter}
+                  onChange={(e) => setPriceFilter(e.target.value)}
+                  className="bg-transparent text-slate-800 text-xs font-semibold outline-none cursor-pointer"
+              >
+                <option value="all">Giá: Tất cả</option>
+                <option value="has_price">Đã có giá niêm yết</option>
+                <option value="contact_price">Giá liên hệ</option>
+              </select>
+            </div>
+
             {/* Packaging Filter */}
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
               <Package className="w-3.5 h-3.5 text-slate-400" />
@@ -305,7 +364,7 @@ export const ClientHome: React.FC<ClientHomeProps> = ({
                   onChange={(e) => setSelectedPackaging(e.target.value)}
                   className="bg-transparent text-slate-800 text-xs font-semibold outline-none cursor-pointer"
               >
-                <option value="all">Tất cả dạng bao bì</option>
+                <option value="all">Tất cả bao bì</option>
                 {packagingsList.map((p) => (
                     <option key={p} value={p}>
                       Dạng {p}

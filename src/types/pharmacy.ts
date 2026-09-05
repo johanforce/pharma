@@ -6,8 +6,16 @@ export interface Product {
   unit: string; // Hộp, Lọ, Chai, Tuýp, Vỉ, Gói, etc.
   category: string; // Danh mục / Nhóm dược lý
   tags?: string[]; // Tags e.g. ["#Bán_chạy", "#Vui_tết"]
-  price: number; // in VNĐ
-  stock: number;
+  price: number; // in VNĐ (0 nếu chưa có giá)
+  rawPrice?: string; // Nguyên bản chuỗi giá từ Cột J
+  hasPrice?: boolean; // false nếu không có giá / 0, true nếu có giá cụ thể
+  priceDisplay?: string; // "Giá liên hệ" hoặc tiền tệ VND e.g. "47.000 ₫"
+  stock: number; // Số lượng số
+  rawStock?: string; // Nguyên bản chuỗi từ Cột I
+  isOutOfStock?: boolean; // true nếu ghi "hết hàng" hoặc số lượng = 0
+  hasSpecificStock?: boolean; // true nếu có số lượng cụ thể > 0
+  hasStockInfo?: boolean; // true nếu có thông tin số lượng (hoặc hết hàng), false nếu để trống
+  stockDisplay?: string; // Chuỗi hiển thị ("Hết hàng", "Còn 100 Hộp", hoặc rỗng)
   productUrl?: string; // Link sản phẩm
   imageUrl: string; // Link ảnh
   usage?: string;
@@ -65,6 +73,11 @@ export interface SheetMeta {
   gid: string;
   sheetUrl: string;
   totalProducts: number;
+  hasPriceCount?: number;
+  contactPriceCount?: number;
+  outOfStockCount?: number;
+  hasQuantityCount?: number;
+  noStockInfoCount?: number;
   lastSync: string;
   isSyncing: boolean;
   error?: string;

@@ -11,8 +11,8 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails }) => {
   const { addToCart } = useCart();
-  const isOutOfStock = Boolean(product.isOutOfStock || product.stock <= 0);
-  const hasSpecificStock = Boolean(product.hasSpecificStock && !isOutOfStock);
+  const isOutOfStock = Boolean(product.isOutOfStock || (product.hasStockInfo && product.stock <= 0));
+  const hasSpecificStock = Boolean(product.hasSpecificStock && !isOutOfStock && product.stock > 0);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -116,27 +116,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
 
           {/* Bottom Price & Stock */}
           <div>
-            <div className="flex items-baseline justify-between pt-2 border-t border-slate-100 mb-2.5">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 mb-2.5 min-h-[32px]">
               <div>
-              <span className="text-sm sm:text-base font-bold text-blue-700">
-                {formatVND(product.price)}
-              </span>
-                <span className="text-[10px] text-slate-400 ml-1">/ {product.unit}</span>
+                {product.hasPrice && product.price > 0 ? (
+                    <div className="flex items-baseline">
+                    <span className="text-sm sm:text-base font-bold text-blue-700">
+                      {formatVND(product.price)}
+                    </span>
+                      <span className="text-[10px] text-slate-400 ml-1">/ {product.unit}</span>
+                    </div>
+                ) : (
+                    <span className="inline-flex items-center text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-lg">
+                    Giá liên hệ
+                  </span>
+                )}
               </div>
 
               {/* Stock View:
-                  - Nếu có chữ "Hết hàng" (hoặc số lượng = 0) -> view đỏ báo hết hàng
-                  - Nếu có số lượng cụ thể -> hiển thị view số lượng
-                  - Nếu không có -> coi như rất nhiều nên KHÔNG hiển thị view số lượng
+                  - nếu có thì ghi ra (ví dụ: Còn {stock} {unit})
+                  - nếu hết hàng thì ghi "Hết hàng" trạng thái view màu đỏ
+                  - ko có thông tin thì ko ghi gì cả (null)
               */}
               <div className="text-right">
                 {isOutOfStock ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
                     <AlertCircle className="w-2.5 h-2.5 text-rose-500" />
                     Hết hàng
                   </span>
                 ) : hasSpecificStock ? (
-                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md">
                     Còn {product.stock} {product.unit}
                   </span>
                 ) : null}
@@ -165,11 +173,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
                   className={`flex items-center justify-center gap-1 min-h-[36px] py-1.5 px-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                       isOutOfStock
                           ? 'bg-rose-50 text-rose-400 border border-rose-200 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-xs active:scale-95'
+                          : product.hasPrice
+                              ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-xs active:scale-95'
+                              : 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white shadow-xs active:scale-95'
                   }`}
               >
                 <ShoppingBag className="w-3.5 h-3.5" />
-                <span>{isOutOfStock ? 'Hết hàng' : 'Thêm giỏ'}</span>
+                <span>{isOutOfStock ? 'Hết hàng' : product.hasPrice ? 'Thêm giỏ' : 'Tư vấn'}</span>
               </button>
             </div>
           </div>

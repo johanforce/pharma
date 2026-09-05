@@ -19,7 +19,15 @@ export interface Product {
     category: string;
     tags: string[];
     price: number;
+    rawPrice?: string;
+    hasPrice: boolean;
+    priceDisplay: string;
     stock: number;
+    rawStock?: string;
+    isOutOfStock: boolean;
+    hasSpecificStock: boolean;
+    hasStockInfo: boolean;
+    stockDisplay?: string;
     productUrl?: string;
     imageUrl: string;
     usage?: string;
@@ -218,26 +226,110 @@ function deriveCategory(name: string, packaging: string, tagsStr: string): strin
     return 'Dược phẩm thiết yếu';
 }
 
-const PRICE_TIERS = [
-    25000, 32000, 38000, 45000, 52000, 68000, 75000, 85000, 96000, 115000,
-    128000, 145000, 165000, 185000, 210000, 245000, 280000, 320000, 360000, 420000
-];
-
-function generatePrice(id: string): number {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) {
-        hash = (hash * 31 + id.charCodeAt(i)) & 0xffffffff;
-    }
-    const idx = Math.abs(hash) % PRICE_TIERS.length;
-    return PRICE_TIERS[idx];
+function formatVND(amount: number): string {
+    if (isNaN(amount) || amount <= 0) return '0 ₫';
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        maximumFractionDigits: 0,
+    }).format(amount);
 }
 
-function generateStock(id: string): number {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) {
-        hash = (hash * 17 + id.charCodeAt(i)) & 0xffffffff;
+// Xử lý giá thuốc từ Cột J của Google Sheet:
+// - Nếu không có thông tin (hoặc bằng 0, rỗng, không có giá) -> ghi "Giá liên hệ"
+// - Nếu có thông tin -> hiển thị số tiền tương ứng
+function parseSheetPrice(raw: string | undefined): { price: number; rawPrice: string; hasPrice: boolean; priceDisplay: string } {
+    if (!raw) {
+        return { price: 0, rawPrice: '', hasPrice: false, priceDisplay: 'Giá liên hệ' };
     }
-    return (Math.abs(hash) % 95) + 12;
+    const cleanStr = raw.trim();
+    if (!cleanStr || cleanStr === '0' || cleanStr.toLowerCase() === 'liên hệ' || cleanStr.toLowerCase() === 'giá liên hệ') {
+        return { price: 0, rawPrice: cleanStr, hasPrice: false, priceDisplay: 'Giá liên hệ' };
+    }
+    // Lọc bỏ ký tự không phải số (ví dụ: "47.000" -> 47000, "1.120.000" -> 1120000)
+    const digitsOnly = cleanStr.replace(/[^\d]/g, '');
+    const num = parseInt(digitsOnly, 10);
+    if (isNaN(num) || num <= 0) {
+        return { price: 0, rawPrice: cleanStr, hasPrice: false, priceDisplay: 'Giá liên hệ' };
+    }
+    return {
+        price: num,
+        rawPrice: cleanStr,
+        hasPrice: true,
+        priceDisplay: formatVND(num),
+    };
+}
+
+// Xử lý số lượng từ Cột I của Google Sheet:
+// - Nếu có số lượng cụ thể -> ghi ra (vd: "Còn 100 Hộp" hoặc "Số lượng: 100")
+// - Nếu hết hàng ("hết hàng", "het hang", "0") -> ghi "Hết hàng" (trạng thái view màu đỏ)
+// - Không có thông tin (rỗng) -> không ghi gì cả (hasStockInfo = false, stockDisplay = '')
+function parseSheetStock(raw: string | undefined, unit: string): {
+    stock: number;
+    rawStock: string;
+    isOutOfStock: boolean;
+    hasSpecificStock: boolean;
+    hasStockInfo: boolean;
+    stockDisplay: string;
+} {
+    if (!raw) {
+        return {
+            stock: 0,
+            rawStock: '',
+            isOutOfStock: false,
+            hasSpecificStock: false,
+            hasStockInfo: false,
+            stockDisplay: '',
+        };
+    }
+    const cleanStr = raw.trim();
+    if (!cleanStr) {
+        return {
+            stock: 0,
+            rawStock: '',
+            isOutOfStock: false,
+            hasSpecificStock: false,
+            hasStockInfo: false,
+            stockDisplay: '',
+        };
+    }
+
+    const norm = normalizeVietnamese(cleanStr).toLowerCase();
+    // Báo hết hàng
+    if (norm.includes('het hang') || norm.includes('tam het') || cleanStr === '0') {
+        return {
+            stock: 0,
+            rawStock: cleanStr,
+            isOutOfStock: true,
+            hasSpecificStock: false,
+            hasStockInfo: true,
+            stockDisplay: 'Hết hàng',
+        };
+    }
+
+    // Có số lượng cụ thể
+    const digits = cleanStr.replace(/[^\d]/g, '');
+    const num = parseInt(digits, 10);
+    if (!isNaN(num) && num > 0) {
+        return {
+            stock: num,
+            rawStock: cleanStr,
+            isOutOfStock: false,
+            hasSpecificStock: true,
+            hasStockInfo: true,
+            stockDisplay: `Còn ${num} ${unit || 'SP'}`,
+        };
+    }
+
+    // Không nhận diện được số lượng hoặc rỗng -> coi như không có thông tin, không ghi gì
+    return {
+        stock: 0,
+        rawStock: cleanStr,
+        isOutOfStock: false,
+        hasSpecificStock: false,
+        hasStockInfo: false,
+        stockDisplay: '',
+    };
 }
 
 // Robust CSV Parser
@@ -332,8 +424,12 @@ function processCSVData(csvText: string): Product[] {
         const category = rawCategory || deriveCategory(name, packaging, rawTags);
         catSet.add(category);
 
-        const price = generatePrice(id);
-        const stock = generateStock(id);
+        // Cột I (index 8): Số lượng, Cột J (index 9): Giá bán
+        const rawStock = row[8] !== undefined ? row[8].trim() : '';
+        const rawPrice = row[9] !== undefined ? row[9].trim() : '';
+
+        const priceInfo = parseSheetPrice(rawPrice);
+        const stockInfo = parseSheetStock(rawStock, unit);
 
         const requiresPrescription =
             category.includes('Kháng sinh') ||
@@ -349,8 +445,16 @@ function processCSVData(csvText: string): Product[] {
             unit,
             category,
             tags,
-            price,
-            stock,
+            price: priceInfo.price,
+            rawPrice: priceInfo.rawPrice,
+            hasPrice: priceInfo.hasPrice,
+            priceDisplay: priceInfo.priceDisplay,
+            stock: stockInfo.stock,
+            rawStock: stockInfo.rawStock,
+            isOutOfStock: stockInfo.isOutOfStock,
+            hasSpecificStock: stockInfo.hasSpecificStock,
+            hasStockInfo: stockInfo.hasStockInfo,
+            stockDisplay: stockInfo.stockDisplay,
             productUrl,
             imageUrl: imageUrl || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
             description: `Sản phẩm ${name}, quy cách: ${packaging}. Phân phối chính hãng qua hệ thống PharmaCare từ kho trực tiếp.`,
@@ -484,12 +588,23 @@ apiRouter.get('/health', (req, res) => {
 
 // 1. Sheet info & health check
 apiRouter.get('/sheet-info', (req, res) => {
+    const hasPriceCount = cachedProducts.filter((p) => p.hasPrice).length;
+    const contactPriceCount = cachedProducts.filter((p) => !p.hasPrice).length;
+    const outOfStockCount = cachedProducts.filter((p) => p.isOutOfStock).length;
+    const hasQuantityCount = cachedProducts.filter((p) => p.hasSpecificStock).length;
+    const noStockInfoCount = cachedProducts.filter((p) => !p.hasStockInfo).length;
+
     res.json({
         success: true,
         sheetId: GOOGLE_SHEET_ID,
         gid: GOOGLE_SHEET_GID,
         sheetUrl: GOOGLE_SHEET_URL,
         totalProducts: cachedProducts.length,
+        hasPriceCount,
+        contactPriceCount,
+        outOfStockCount,
+        hasQuantityCount,
+        noStockInfoCount,
         lastSync: lastSyncTime,
         isSyncing,
         syncError,
@@ -519,6 +634,8 @@ apiRouter.get('/products', (req, res) => {
     const category = (req.query.category as string) || '';
     const packaging = (req.query.packaging as string) || '';
     const sort = (req.query.sort as string) || 'default';
+    const stockFilter = (req.query.stockFilter as string) || 'all';
+    const priceFilter = (req.query.priceFilter as string) || 'all';
 
     let filtered = cachedProducts;
 
@@ -532,6 +649,22 @@ apiRouter.get('/products', (req, res) => {
 
     if (packaging && packaging !== 'all') {
         filtered = filtered.filter((p) => p.unit === packaging);
+    }
+
+    if (stockFilter === 'out-of-stock') {
+        filtered = filtered.filter((p) => p.isOutOfStock);
+    } else if (stockFilter === 'has-quantity') {
+        filtered = filtered.filter((p) => p.hasSpecificStock);
+    } else if (stockFilter === 'in-stock') {
+        filtered = filtered.filter((p) => !p.isOutOfStock);
+    } else if (stockFilter === 'no-info') {
+        filtered = filtered.filter((p) => !p.hasStockInfo);
+    }
+
+    if (priceFilter === 'has-price') {
+        filtered = filtered.filter((p) => p.hasPrice);
+    } else if (priceFilter === 'contact-price') {
+        filtered = filtered.filter((p) => !p.hasPrice);
     }
 
     if (search.trim()) {
@@ -553,9 +686,21 @@ apiRouter.get('/products', (req, res) => {
     } else if (sort === 'name-desc') {
         filtered = [...filtered].sort((a, b) => b.name.localeCompare(a.name, 'vi'));
     } else if (sort === 'price-asc') {
-        filtered = [...filtered].sort((a, b) => a.price - b.price);
+        filtered = [...filtered].sort((a, b) => {
+            if (a.hasPrice && b.hasPrice) return a.price - b.price;
+            if (a.hasPrice && !b.hasPrice) return -1;
+            if (!a.hasPrice && b.hasPrice) return 1;
+            return 0;
+        });
     } else if (sort === 'price-desc') {
-        filtered = [...filtered].sort((a, b) => b.price - a.price);
+        filtered = [...filtered].sort((a, b) => {
+            if (a.hasPrice && b.hasPrice) return b.price - a.price;
+            if (a.hasPrice && !b.hasPrice) return -1;
+            if (!a.hasPrice && b.hasPrice) return 1;
+            return 0;
+        });
+    } else if (sort === 'stock-desc') {
+        filtered = [...filtered].sort((a, b) => b.stock - a.stock);
     } else if (sort === 'id-asc') {
         filtered = [...filtered].sort((a, b) => parseInt(a.id) - parseInt(b.id));
     } else if (sort === 'id-desc') {
@@ -585,6 +730,15 @@ apiRouter.get('/products', (req, res) => {
             sheetUrl: GOOGLE_SHEET_URL,
         },
     });
+});
+
+// 4. Get product by ID or Code
+apiRouter.get('/products/:id', (req, res) => {
+    const product = cachedProducts.find((p) => p.id === req.params.id || p.code === req.params.id);
+    if (!product) {
+        return res.status(404).json({ success: false, error: 'Không tìm thấy sản phẩm' });
+    }
+    res.json({ success: true, product });
 });
 
 // 4. Create Order

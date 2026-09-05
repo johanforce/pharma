@@ -229,7 +229,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onOrderSuccess }) => {
                             {item.product.name}
                           </h4>
                           <p className="text-[11px] text-slate-500 font-medium">
-                            {formatVND(item.product.price)} / {item.product.unit}
+                            {item.product.hasPrice && item.product.price > 0
+                                ? `${formatVND(item.product.price)} / ${item.product.unit}`
+                                : 'Giá liên hệ'}
                           </p>
                           <div className="flex items-center justify-between mt-2">
                             <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
@@ -252,8 +254,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onOrderSuccess }) => {
                               </button>
                             </div>
                             <span className="text-xs font-bold text-blue-700">
-                        {formatVND(item.product.price * item.quantity)}
-                      </span>
+                              {item.product.hasPrice && item.product.price > 0
+                                  ? formatVND(item.product.price * item.quantity)
+                                  : 'Báo giá sau'}
+                            </span>
                           </div>
                         </div>
                         <button
