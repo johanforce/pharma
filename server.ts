@@ -11,6 +11,9 @@ async function startServer() {
         console.warn('[Server] Initial data load warning:', err);
     });
 
+    // Serve public directory statically (favicon, assets)
+    app.use(express.static(path.join(process.cwd(), 'public')));
+
     // Vite middleware setup
     if (process.env.NODE_ENV !== 'production') {
         const vite = await createViteServer({
