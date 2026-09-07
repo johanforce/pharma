@@ -48,8 +48,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onOrderSuccess }) => {
 
   if (!isCartOpen) return null;
 
-  const freeShippingThreshold = 300000;
-  const shippingFee = totalAmount >= freeShippingThreshold || totalAmount === 0 ? 0 : 25000;
+  const freeShippingThreshold = 3000000;
+  const shippingFee = totalAmount >= freeShippingThreshold || totalAmount === 0 ? 0 : 22000;
   const grandTotal = totalAmount + shippingFee;
 
   const validateForm = () => {
