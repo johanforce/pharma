@@ -4,9 +4,10 @@ import { SheetMeta } from '../types/pharmacy';
 
 interface FooterProps {
   sheetMeta: SheetMeta | null;
+  onNavigateToAdmin?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ sheetMeta }) => {
+export const Footer: React.FC<FooterProps> = ({ sheetMeta, onNavigateToAdmin }) => {
   return (
       <footer className="bg-slate-900 text-slate-300 text-xs mt-16 border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -57,8 +58,20 @@ export const Footer: React.FC<FooterProps> = ({ sheetMeta }) => {
 
           {/* Bottom copyright */}
           <div className="pt-8 mt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-500 text-[11px]">
-            <div>
-              © {new Date().getFullYear()} PharmaCare.
+            <div className="flex items-center gap-3">
+              <span>© {new Date().getFullYear()} PharmaCare.</span>
+              {onNavigateToAdmin && (
+                  <>
+                    <span>•</span>
+                    <button
+                        type="button"
+                        onClick={onNavigateToAdmin}
+                        className="text-slate-400 hover:text-teal-300 transition-colors underline underline-offset-2 cursor-pointer"
+                    >
+                      Quản trị đơn hàng
+                    </button>
+                  </>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <span>Được xây dựng với</span>

@@ -59,7 +59,42 @@ export interface Order {
     createdAt: string;
 }
 
-// In-memory cache
+// Real Firebase Firestore configuration for blogperzz
+const FIREBASE_PROJECT_ID = 'blogperzz';
+const FIRESTORE_BASE_URL = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+
+// Helper: Convert Firestore REST document to Order object
+function firestoreDocToOrder(doc: any): Order {
+    const id = doc.name.split('/').pop();
+    const f = doc.fields || {};
+    const items = (f.items?.arrayValue?.values || []).map((v: any) => {
+        const mf = v.mapValue?.fields || {};
+        return {
+            productId: mf.productId?.stringValue || '',
+            name: mf.name?.stringValue || '',
+            price: parseInt(mf.price?.integerValue || mf.price?.doubleValue || 0),
+            quantity: parseInt(mf.quantity?.integerValue || 1),
+            unit: mf.unit?.stringValue || 'Hộp',
+            imageUrl: mf.imageUrl?.stringValue || ''
+        };
+    });
+
+    return {
+        id,
+        customerName: f.customerName?.stringValue || 'Khách lẻ',
+        phone: f.phone?.stringValue || '',
+        address: f.address?.stringValue || '',
+        note: f.note?.stringValue || '',
+        paymentMethod: (f.paymentMethod?.stringValue as any) || 'cod',
+        status: (f.status?.stringValue as any) || 'mới',
+        totalAmount: parseInt(f.totalAmount?.integerValue || f.totalAmount?.doubleValue || 0),
+        shippingFee: parseInt(f.shippingFee?.integerValue || 0),
+        createdAt: f.createdAt?.timestampValue || f.createdAt?.stringValue || doc.createTime || new Date().toISOString(),
+        items
+    };
+}
+
+// In-memory cache for Google Sheet products
 let cachedProducts: Product[] = [];
 let allTags: string[] = [];
 let allCategories: string[] = [];
@@ -67,7 +102,6 @@ let allPackagings: string[] = [];
 let lastSyncTime = new Date().toISOString();
 let isSyncing = false;
 let syncError: string | null = null;
-const ordersList: Order[] = [];
 let initPromise: Promise<void> | null = null;
 
 // Helper: Normalize Vietnamese text for search
@@ -741,46 +775,304 @@ apiRouter.get('/products/:id', (req, res) => {
     res.json({ success: true, product });
 });
 
-// 4. Create Order
-apiRouter.post('/orders', (req, res) => {
+// 4. Firebase Firestore Connection Status Check
+apiRouter.get('/firebase-status', async (req, res) => {
+    const startTime = Date.now();
+    try {
+        const response = await fetch(`${FIRESTORE_BASE_URL}/orders?pageSize=100`, {
+            headers: { 'Accept': 'application/json' },
+        });
+        const latencyMs = Date.now() - startTime;
+
+        if (!response.ok) {
+            const errText = await response.text();
+            return res.status(502).json({
+                success: false,
+                isConnected: false,
+                status: 'error',
+                projectId: FIREBASE_PROJECT_ID,
+                errorMessage: `Lỗi kết nối Firebase (${response.status}): ${errText.slice(0, 150)}`,
+                ordersCount: 0,
+                latencyMs,
+                lastChecked: new Date().toISOString()
+            });
+        }
+
+        const data: any = await response.json();
+        const count = Array.isArray(data.documents) ? data.documents.length : 0;
+
+        return res.json({
+            success: true,
+            isConnected: true,
+            status: 'connected',
+            projectId: FIREBASE_PROJECT_ID,
+            ordersCount: count,
+            latencyMs,
+            lastChecked: new Date().toISOString()
+        });
+    } catch (err: any) {
+        return res.status(503).json({
+            success: false,
+            isConnected: false,
+            status: 'error',
+            projectId: FIREBASE_PROJECT_ID,
+            errorMessage: err?.message || 'Không thể kết nối đến máy chủ Firebase Firestore',
+            ordersCount: 0,
+            lastChecked: new Date().toISOString()
+        });
+    }
+});
+
+// 5. Get Orders directly from Firebase Firestore (Zero fake data)
+apiRouter.get('/orders', async (req, res) => {
+    try {
+        const response = await fetch(`${FIRESTORE_BASE_URL}/orders?pageSize=100`, {
+            headers: { 'Accept': 'application/json' },
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            return res.status(response.status).json({
+                success: false,
+                error: `Không thể tải đơn hàng từ Firebase: ${errText.slice(0, 120)}`,
+                orders: []
+            });
+        }
+
+        const data: any = await response.json();
+        const rawDocs = data.documents || [];
+        const realOrders: Order[] = rawDocs.map((d: any) => firestoreDocToOrder(d));
+
+        // Sort descending by createdAt
+        realOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        res.json({
+            success: true,
+            orders: realOrders,
+            total: realOrders.length,
+            source: 'firebase_firestore_blogperzz'
+        });
+    } catch (err: any) {
+        console.error('Lỗi khi truy vấn Firestore orders:', err);
+        res.status(500).json({
+            success: false,
+            error: err?.message || 'Lỗi mạng khi kết nối Firestore',
+            orders: []
+        });
+    }
+});
+
+// 6. Create Order directly in Firebase Firestore
+apiRouter.post('/orders', async (req, res) => {
     const { customerName, phone, address, note, paymentMethod, items, totalAmount, shippingFee } = req.body;
 
     if (!customerName || !phone || !address || !items || !items.length) {
         return res.status(400).json({ success: false, error: 'Thiếu thông tin đơn hàng bắt buộc' });
     }
 
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const orderId = `DH-${Date.now().toString().slice(-4)}${randomSuffix}`;
-
-    const newOrder: Order = {
-        id: orderId,
-        customerName: customerName.trim(),
-        phone: phone.trim(),
-        address: address.trim(),
-        note: note ? note.trim() : '',
-        paymentMethod: paymentMethod || 'cod',
-        items,
-        totalAmount: totalAmount || 0,
-        shippingFee: shippingFee || 0,
-        status: 'mới',
-        createdAt: new Date().toISOString(),
+    const payload = {
+        fields: {
+            customerName: { stringValue: String(customerName).trim() },
+            phone: { stringValue: String(phone).trim() },
+            address: { stringValue: String(address).trim() },
+            note: { stringValue: note ? String(note).trim() : '' },
+            paymentMethod: { stringValue: paymentMethod || 'cod' },
+            status: { stringValue: 'mới' },
+            totalAmount: { integerValue: String(totalAmount || 0) },
+            shippingFee: { integerValue: String(shippingFee || 0) },
+            createdAt: { timestampValue: new Date().toISOString() },
+            items: {
+                arrayValue: {
+                    values: (items || []).map((it: any) => ({
+                        mapValue: {
+                            fields: {
+                                productId: { stringValue: String(it.productId || '') },
+                                name: { stringValue: String(it.name || '') },
+                                price: { integerValue: String(it.price || 0) },
+                                quantity: { integerValue: String(it.quantity || 1) },
+                                unit: { stringValue: String(it.unit || 'Hộp') },
+                                imageUrl: { stringValue: String(it.imageUrl || '') }
+                            }
+                        }
+                    }))
+                }
+            }
+        }
     };
 
-    ordersList.unshift(newOrder);
+    try {
+        const response = await fetch(`${FIRESTORE_BASE_URL}/orders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-    res.json({
-        success: true,
-        message: 'Đặt hàng thành công!',
-        order: newOrder,
-    });
+        if (!response.ok) {
+            const errText = await response.text();
+            return res.status(response.status).json({
+                success: false,
+                error: `Lỗi ghi Firestore: ${errText.slice(0, 150)}`
+            });
+        }
+
+        const createdDoc: any = await response.json();
+        const realOrder = firestoreDocToOrder(createdDoc);
+
+        res.json({
+            success: true,
+            message: 'Đặt hàng thành công lên Firebase Firestore!',
+            order: realOrder
+        });
+    } catch (err: any) {
+        console.error('Lỗi khi thêm đơn hàng lên Firestore:', err);
+        res.status(500).json({
+            success: false,
+            error: err?.message || 'Không thể kết nối Firestore để tạo đơn hàng'
+        });
+    }
 });
 
-// 5. Get orders list
-apiRouter.get('/orders', (req, res) => {
-    res.json({
-        success: true,
-        orders: ordersList,
-    });
+// 7. Update Order status/data in Firebase Firestore
+apiRouter.put('/orders/:id', async (req, res) => {
+    const { id } = req.params;
+    const { status, customerName, phone, address, note, paymentMethod, items, totalAmount, shippingFee } = req.body;
+
+    // First fetch current doc to patch properly
+    try {
+        const getRes = await fetch(`${FIRESTORE_BASE_URL}/orders/${id}`);
+        if (!getRes.ok) {
+            return res.status(404).json({ success: false, error: 'Không tìm thấy đơn hàng trên Firestore' });
+        }
+
+        const existingDoc: any = await getRes.json();
+        const currentFields = existingDoc.fields || {};
+
+        const updateMaskFields: string[] = ['updatedAt'];
+        const updatedFields: any = {
+            ...currentFields,
+            updatedAt: { timestampValue: new Date().toISOString() }
+        };
+
+        if (status !== undefined) {
+            updatedFields.status = { stringValue: status };
+            updateMaskFields.push('status');
+        }
+        if (customerName !== undefined) {
+            updatedFields.customerName = { stringValue: String(customerName).trim() };
+            updateMaskFields.push('customerName');
+        }
+        if (phone !== undefined) {
+            updatedFields.phone = { stringValue: String(phone).trim() };
+            updateMaskFields.push('phone');
+        }
+        if (address !== undefined) {
+            updatedFields.address = { stringValue: String(address).trim() };
+            updateMaskFields.push('address');
+        }
+        if (note !== undefined) {
+            updatedFields.note = { stringValue: String(note).trim() };
+            updateMaskFields.push('note');
+        }
+        if (paymentMethod !== undefined) {
+            updatedFields.paymentMethod = { stringValue: paymentMethod };
+            updateMaskFields.push('paymentMethod');
+        }
+        if (totalAmount !== undefined) {
+            updatedFields.totalAmount = { integerValue: String(totalAmount) };
+            updateMaskFields.push('totalAmount');
+        }
+        if (shippingFee !== undefined) {
+            updatedFields.shippingFee = { integerValue: String(shippingFee) };
+            updateMaskFields.push('shippingFee');
+        }
+        if (items !== undefined) {
+            updatedFields.items = {
+                arrayValue: {
+                    values: (items || []).map((it: any) => ({
+                        mapValue: {
+                            fields: {
+                                productId: { stringValue: String(it.productId || '') },
+                                name: { stringValue: String(it.name || '') },
+                                price: { integerValue: String(it.price || 0) },
+                                quantity: { integerValue: String(it.quantity || 1) },
+                                unit: { stringValue: String(it.unit || 'Hộp') },
+                                imageUrl: { stringValue: String(it.imageUrl || '') }
+                            }
+                        }
+                    }))
+                }
+            };
+            updateMaskFields.push('items');
+        }
+
+        const maskParams = updateMaskFields.map(f => `updateMask.fieldPaths=${f}`).join('&');
+        const patchRes = await fetch(`${FIRESTORE_BASE_URL}/orders/${id}?${maskParams}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: updatedFields })
+        });
+
+        if (!patchRes.ok) {
+            const err = await patchRes.text();
+            return res.status(patchRes.status).json({ success: false, error: err });
+        }
+
+        const patchedDoc: any = await patchRes.json();
+        const patchedOrder = firestoreDocToOrder(patchedDoc);
+
+        res.json({
+            success: true,
+            message: 'Cập nhật đơn hàng trên Firestore thành công!',
+            order: patchedOrder
+        });
+    } catch (err: any) {
+        res.status(500).json({ success: false, error: err?.message || 'Lỗi cập nhật Firestore' });
+    }
+});
+
+// 8. Delete Order from Firebase Firestore
+apiRouter.delete('/orders/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const delRes = await fetch(`${FIRESTORE_BASE_URL}/orders/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (!delRes.ok) {
+            const err = await delRes.text();
+            return res.status(delRes.status).json({ success: false, error: err });
+        }
+
+        res.json({
+            success: true,
+            message: 'Đã xóa đơn hàng khỏi Firebase Firestore thành công!',
+            id
+        });
+    } catch (err: any) {
+        res.status(500).json({ success: false, error: err?.message || 'Lỗi khi xóa trên Firestore' });
+    }
+});
+
+// 9. URL Shortener Endpoint (Hỗ trợ tạo link rút gọn như bit.ly/tinyurl)
+apiRouter.post('/shorten', async (req, res) => {
+    const { url } = req.body;
+    if (!url || typeof url !== 'string') {
+        return res.status(400).json({ success: false, error: 'Vui lòng cung cấp URL hợp lệ cần rút gọn' });
+    }
+    try {
+        const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`);
+        if (response.ok) {
+            const shortUrl = await response.text();
+            return res.json({
+                success: true,
+                shortUrl: shortUrl.trim(),
+                originalUrl: url
+            });
+        }
+        res.status(502).json({ success: false, error: 'Dịch vụ rút gọn link không phản hồi' });
+    } catch (err: any) {
+        res.status(500).json({ success: false, error: err?.message || 'Lỗi khi tạo link rút gọn' });
+    }
 });
 
 // Mount at /api so all API endpoints are cleanly scoped

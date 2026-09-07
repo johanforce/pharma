@@ -9,6 +9,7 @@ import {
   deleteDoc,
   query,
   orderBy,
+  onSnapshot,
   serverTimestamp,
   Firestore
 } from 'firebase/firestore';
@@ -51,8 +52,46 @@ export interface FirebaseConnectionStatus {
   isConnected: boolean;
   projectId: string;
   errorMessage?: string;
+  ordersCount?: number;
   productCount: number;
-  lastChecked?: string;
+  latencyMs?: number;
+  lastChecked: string;
+}
+
+type StatusListener = (status: FirebaseConnectionStatus) => void;
+const statusListeners = new Set<StatusListener>();
+
+let latestConnectionStatus: FirebaseConnectionStatus = {
+  status: 'checking',
+  isConnected: false,
+  projectId: FIREBASE_CONFIG.projectId,
+  ordersCount: 0,
+  productCount: 0,
+  lastChecked: new Date().toLocaleTimeString('vi-VN')
+};
+
+export function subscribeToFirebaseStatus(listener: StatusListener): () => void {
+  statusListeners.add(listener);
+  // Send current cached status immediately
+  listener(latestConnectionStatus);
+  return () => {
+    statusListeners.delete(listener);
+  };
+}
+
+export function notifyStatusListeners(status: FirebaseConnectionStatus) {
+  latestConnectionStatus = status;
+  statusListeners.forEach((l) => {
+    try {
+      l(status);
+    } catch (e) {
+      console.error('Error in status listener:', e);
+    }
+  });
+}
+
+export function getLatestConnectionStatus(): FirebaseConnectionStatus {
+  return latestConnectionStatus;
 }
 
 let app: FirebaseApp | null = null;
@@ -110,7 +149,7 @@ export async function fetchProductsWithStatus(): Promise<{
     const q = query(collection(db, 'products'));
     const snapshot = await getDocs(q);
     const firestoreProducts: Product[] = [];
-    
+
     snapshot.forEach((docSnap) => {
       firestoreProducts.push({
         id: docSnap.id,
@@ -133,7 +172,7 @@ export async function fetchProductsWithStatus(): Promise<{
     };
   } catch (err: any) {
     console.error('Lỗi kết nối Firebase Firestore blogperzz:', err);
-    
+
     let friendlyError = 'Không thể kết nối đến máy chủ Firestore.';
     if (err?.code === 'permission-denied' || err?.message?.includes('permission') || err?.message?.includes('Missing or insufficient permissions')) {
       friendlyError = 'Không có quyền truy cập Firestore (Permission Denied). Vui lòng cập nhật "Firestore Rules" cho phép đọc/ghi trên Firebase Console của dự án blogperzz.';
@@ -241,7 +280,7 @@ export async function fetchCategories(): Promise<PharmacyCategory[]> {
       const q = query(collection(db, 'categories'));
       const snapshot = await getDocs(q);
       const firestoreCategories: PharmacyCategory[] = [];
-      
+
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
         firestoreCategories.push({
@@ -367,10 +406,167 @@ export async function resetCategoriesToDefault(): Promise<PharmacyCategory[]> {
 }
 
 // ==========================================
-// 3. ORDERS API (Firestore collection 'orders')
+// 3. CONNECTION CHECKER & STATUS MONITOR
 // ==========================================
 
+export async function checkFirebaseConnectionStatus(): Promise<FirebaseConnectionStatus> {
+  const startTime = Date.now();
+  let ordersCount = 0;
+  let isConnected = false;
+  let errorMessage: string | undefined;
+
+  // 1. First test Firestore SDK
+  if (db && isFirebaseInitialized) {
+    try {
+      const q = query(collection(db, 'orders'));
+      const snap = await getDocs(q);
+      ordersCount = snap.size;
+      isConnected = true;
+    } catch (sdkErr: any) {
+      console.warn('Firestore SDK test notice:', sdkErr?.message || sdkErr);
+    }
+  }
+
+  // 2. If SDK test wasn't conclusive, test the Express API proxy to Firestore
+  if (!isConnected) {
+    try {
+      const res = await fetch('/api/firebase-status');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.isConnected) {
+          isConnected = true;
+          ordersCount = data.ordersCount || 0;
+        } else {
+          errorMessage = data.errorMessage || 'Máy chủ báo lỗi kết nối Firebase';
+        }
+      } else {
+        errorMessage = `HTTP ${res.status}: Không thể liên hệ API kiểm tra Firebase`;
+      }
+    } catch (apiErr: any) {
+      errorMessage = apiErr?.message || 'Không thể kết nối máy chủ dữ liệu';
+    }
+  }
+
+  const latencyMs = Date.now() - startTime;
+  const statusResult: FirebaseConnectionStatus = {
+    status: isConnected ? 'connected' : 'error',
+    isConnected,
+    projectId: FIREBASE_CONFIG.projectId,
+    ordersCount,
+    productCount: 0,
+    latencyMs,
+    errorMessage: isConnected ? undefined : (errorMessage || 'Mất kết nối tới cơ sở dữ liệu Firebase Firestore (blogperzz)'),
+    lastChecked: new Date().toLocaleTimeString('vi-VN')
+  };
+
+  notifyStatusListeners(statusResult);
+  return statusResult;
+}
+
+// ==========================================
+// 4. ORDERS API (Pure Firestore, Zero Fake Data)
+// ==========================================
+
+export function subscribeToOrders(
+    onOrdersChanged: (orders: Order[]) => void,
+    onError?: (err: any) => void
+): () => void {
+  let isSubscribed = true;
+
+  if (db && isFirebaseInitialized) {
+    try {
+      const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            if (!isSubscribed) return;
+            const firestoreOrders: Order[] = [];
+            snapshot.forEach((docSnap) => {
+              const data = docSnap.data();
+              firestoreOrders.push({
+                id: docSnap.id,
+                customerName: data.customerName || 'Khách lẻ',
+                phone: data.phone || '',
+                address: data.address || '',
+                note: data.note || '',
+                items: data.items || [],
+                totalAmount: Number(data.totalAmount) || 0,
+                shippingFee: Number(data.shippingFee) || 0,
+                status: data.status || 'mới',
+                paymentMethod: data.paymentMethod || 'cod',
+                createdAt: data.createdAt?.toDate
+                    ? data.createdAt.toDate().toISOString()
+                    : (data.createdAt || new Date().toISOString())
+              });
+            });
+
+            // Notify connection is active (Báo xanh)
+            notifyStatusListeners({
+              status: 'connected',
+              isConnected: true,
+              projectId: FIREBASE_CONFIG.projectId,
+              ordersCount: firestoreOrders.length,
+              productCount: 0,
+              lastChecked: new Date().toLocaleTimeString('vi-VN')
+            });
+
+            onOrdersChanged(firestoreOrders);
+          },
+          (error) => {
+            console.warn('Firestore onSnapshot listener error, switching to API sync:', error);
+            if (onError) onError(error);
+
+            // Notify connection error if disconnected (Báo đỏ)
+            notifyStatusListeners({
+              status: 'error',
+              isConnected: false,
+              projectId: FIREBASE_CONFIG.projectId,
+              ordersCount: 0,
+              productCount: 0,
+              errorMessage: 'Mất kết nối lắng nghe thời gian thực Firebase Firestore',
+              lastChecked: new Date().toLocaleTimeString('vi-VN')
+            });
+
+            // One-time fallback query via API
+            fetchOrders()
+                .then(onOrdersChanged)
+                .catch((e) => onError && onError(e));
+          }
+      );
+
+      return () => {
+        isSubscribed = false;
+        unsubscribe();
+      };
+    } catch (err) {
+      console.warn('Cannot attach Firestore snapshot listener:', err);
+    }
+  }
+
+  // Fallback if client SDK initialization is pending
+  fetchOrders()
+      .then((ords) => {
+        if (isSubscribed) onOrdersChanged(ords);
+      })
+      .catch((e) => onError && onError(e));
+
+  const pollInterval = setInterval(() => {
+    if (!isSubscribed) return;
+    fetchOrders()
+        .then((ords) => {
+          if (isSubscribed) onOrdersChanged(ords);
+        })
+        .catch((e) => onError && onError(e));
+  }, 12000);
+
+  return () => {
+    isSubscribed = false;
+    clearInterval(pollInterval);
+  };
+}
+
 export async function fetchOrders(): Promise<Order[]> {
+  // 1. Try Firestore client SDK directly
   if (db && isFirebaseInitialized) {
     try {
       const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
@@ -380,44 +576,71 @@ export async function fetchOrders(): Promise<Order[]> {
         const data = docSnap.data();
         firestoreOrders.push({
           id: docSnap.id,
-          customerName: data.customerName || '',
+          customerName: data.customerName || 'Khách lẻ',
           phone: data.phone || '',
           address: data.address || '',
           note: data.note || '',
           items: data.items || [],
-          totalAmount: data.totalAmount || 0,
+          totalAmount: Number(data.totalAmount) || 0,
+          shippingFee: Number(data.shippingFee) || 0,
           status: data.status || 'mới',
           paymentMethod: data.paymentMethod || 'cod',
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : (data.createdAt || new Date().toISOString())
         });
       });
-      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(firestoreOrders));
+
+      notifyStatusListeners({
+        status: 'connected',
+        isConnected: true,
+        projectId: FIREBASE_CONFIG.projectId,
+        ordersCount: firestoreOrders.length,
+        productCount: 0,
+        lastChecked: new Date().toLocaleTimeString('vi-VN')
+      });
+
       return firestoreOrders;
-    } catch (err) {
-      console.warn('Firestore fetch orders failed:', err);
+    } catch (err: any) {
+      console.warn('Firestore client SDK fetchOrders notice:', err?.message || err);
     }
   }
 
-  const local = localStorage.getItem(STORAGE_KEYS.ORDERS);
-  if (local) {
-    try {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed)) {
-        return parsed;
+  // 2. Fallback to API proxy (which reads directly from Firestore REST without fake data)
+  try {
+    const res = await fetch('/api/orders');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.orders)) {
+        notifyStatusListeners({
+          status: 'connected',
+          isConnected: true,
+          projectId: FIREBASE_CONFIG.projectId,
+          ordersCount: data.orders.length,
+          productCount: 0,
+          lastChecked: new Date().toLocaleTimeString('vi-VN')
+        });
+        return data.orders;
       }
-    } catch (e) {
-      console.error('Error parsing local orders', e);
     }
+  } catch (apiErr: any) {
+    console.error('API proxy fetch orders failed:', apiErr);
   }
 
-  return [];
+  // 3. If failed, report error status (Báo Đỏ) and throw - NO FAKE DATA ALLOWED
+  notifyStatusListeners({
+    status: 'error',
+    isConnected: false,
+    projectId: FIREBASE_CONFIG.projectId,
+    ordersCount: 0,
+    productCount: 0,
+    errorMessage: 'Không thể tải đơn hàng từ Firebase Firestore (blogperzz)',
+    lastChecked: new Date().toLocaleTimeString('vi-VN')
+  });
+
+  throw new Error('Mất kết nối tới cơ sở dữ liệu Firebase Firestore. Không sử dụng dữ liệu mẫu.');
 }
 
 export async function submitOrder(orderData: Omit<Order, 'id' | 'status' | 'createdAt'>): Promise<Order> {
-  const generatedId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-  const nowIso = new Date().toISOString();
-  let finalId = generatedId;
-
+  // 1. Try Firestore client SDK
   if (db && isFirebaseInitialized) {
     try {
       const docRef = await addDoc(collection(db, 'orders'), {
@@ -428,50 +651,124 @@ export async function submitOrder(orderData: Omit<Order, 'id' | 'status' | 'crea
         paymentMethod: orderData.paymentMethod || 'cod',
         items: orderData.items,
         totalAmount: orderData.totalAmount,
+        shippingFee: orderData.shippingFee || 0,
         status: 'mới',
         createdAt: serverTimestamp()
       });
-      finalId = docRef.id;
-    } catch (err) {
-      console.warn('Firestore add order warning:', err);
+
+      return {
+        id: docRef.id,
+        customerName: orderData.customerName,
+        phone: orderData.phone,
+        address: orderData.address,
+        note: orderData.note || '',
+        paymentMethod: orderData.paymentMethod || 'cod',
+        items: orderData.items,
+        totalAmount: orderData.totalAmount,
+        shippingFee: orderData.shippingFee || 0,
+        status: 'mới',
+        createdAt: new Date().toISOString()
+      };
+    } catch (err: any) {
+      console.warn('Firestore SDK addDoc notice, trying API proxy:', err?.message || err);
     }
   }
 
-  const newOrder: Order = {
-    id: finalId,
-    customerName: orderData.customerName,
-    phone: orderData.phone,
-    address: orderData.address,
-    note: orderData.note,
-    paymentMethod: orderData.paymentMethod || 'cod',
-    items: orderData.items,
-    totalAmount: orderData.totalAmount,
-    status: 'mới',
-    createdAt: nowIso
-  };
+  // 2. Fallback to API proxy (which persists directly to Firestore REST)
+  const res = await fetch('/api/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(orderData)
+  });
 
-  const currentOrders = await fetchOrders();
-  const updatedOrders = [newOrder, ...currentOrders];
-  localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(updatedOrders));
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || 'Lỗi khi lưu đơn hàng lên Firebase Firestore');
+  }
 
-  return newOrder;
+  const data = await res.json();
+  return data.order;
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus): Promise<void> {
+  let updated = false;
+
+  // 1. Try Firestore client SDK
   if (db && isFirebaseInitialized) {
     try {
       const docRef = doc(db, 'orders', id);
       await updateDoc(docRef, { status, updatedAt: serverTimestamp() });
-    } catch (err) {
-      console.warn('Firestore update order status failed:', err);
+      updated = true;
+    } catch (err: any) {
+      console.warn('Firestore SDK updateOrderStatus notice, trying API proxy:', err?.message || err);
     }
   }
 
-  const currentOrders = await fetchOrders();
-  const index = currentOrders.findIndex((o) => o.id === id);
-  if (index !== -1) {
-    currentOrders[index].status = status;
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(currentOrders));
+  // 2. Fallback to API proxy
+  if (!updated) {
+    const res = await fetch(`/api/orders/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Lỗi khi cập nhật trạng thái đơn hàng trên Firebase');
+    }
+  }
+}
+
+export async function updateOrderData(id: string, data: Partial<Order>): Promise<void> {
+  let updated = false;
+
+  // 1. Try Firestore client SDK
+  if (db && isFirebaseInitialized) {
+    try {
+      const docRef = doc(db, 'orders', id);
+      await updateDoc(docRef, { ...data, updatedAt: serverTimestamp() });
+      updated = true;
+    } catch (err: any) {
+      console.warn('Firestore SDK updateOrderData notice, trying API proxy:', err?.message || err);
+    }
+  }
+
+  // 2. Fallback to API proxy
+  if (!updated) {
+    const res = await fetch(`/api/orders/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Lỗi khi cập nhật đơn hàng trên Firebase');
+    }
+  }
+}
+
+export async function deleteOrderById(id: string): Promise<void> {
+  let deleted = false;
+
+  // 1. Try Firestore client SDK
+  if (db && isFirebaseInitialized) {
+    try {
+      const docRef = doc(db, 'orders', id);
+      await deleteDoc(docRef);
+      deleted = true;
+    } catch (err: any) {
+      console.warn('Firestore SDK deleteDoc notice, trying API proxy:', err?.message || err);
+    }
+  }
+
+  // 2. Fallback to API proxy
+  if (!deleted) {
+    const res = await fetch(`/api/orders/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Lỗi khi xóa đơn hàng trên Firebase');
+    }
   }
 }
 

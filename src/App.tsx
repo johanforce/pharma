@@ -1,17 +1,76 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { FirebaseConnectionProvider } from './context/FirebaseConnectionContext';
 import { Navbar } from './components/Navbar';
+import { FirebaseStatusBanner } from './components/FirebaseStatusBanner';
 import { ClientHome } from './components/client/ClientHome';
 import { CartDrawer } from './components/CartDrawer';
 import { OrderSuccessModal } from './components/OrderSuccessModal';
 import { Footer } from './components/Footer';
-import { SheetMeta, Order } from './types/pharmacy';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+import { AdminLogin } from './components/admin/AdminLogin';
+import { SheetMeta, Order, OrderStatus } from './types/pharmacy';
+import {
+  fetchOrders,
+  subscribeToOrders,
+  submitOrder,
+  updateOrderStatus,
+  updateOrderData,
+  deleteOrderById
+} from './services/firebase';
 
-export default function App() {
+function MainApp() {
+  const [viewMode, setViewMode] = useState<'client' | 'admin'>('client');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sheetMeta, setSheetMeta] = useState<SheetMeta | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+
+  // Orders state - Live from Firestore (zero fake data)
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState<boolean>(true);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+
+  const { isAdminLoggedIn } = useAuth();
+
+  // Subscribe to real-time updates from Firebase Firestore
+  useEffect(() => {
+    setIsOrdersLoading(true);
+    setOrdersError(null);
+
+    const unsubscribe = subscribeToOrders(
+        (liveOrders) => {
+          setOrders(liveOrders);
+          setIsOrdersLoading(false);
+          setOrdersError(null);
+        },
+        (err) => {
+          console.error('Lỗi lắng nghe đơn hàng từ Firebase:', err);
+          setOrdersError(err?.message || 'Không thể tải đơn hàng từ Firebase');
+          setIsOrdersLoading(false);
+        }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Manual reload orders if requested
+  const loadOrders = useCallback(async () => {
+    setIsOrdersLoading(true);
+    setOrdersError(null);
+    try {
+      const list = await fetchOrders();
+      setOrders(list);
+    } catch (e: any) {
+      console.error('Failed to load orders', e);
+      setOrdersError(e?.message || 'Lỗi tải đơn hàng');
+    } finally {
+      setIsOrdersLoading(false);
+    }
+  }, []);
 
   // Fetch Google Sheets metadata
   const fetchSheetInfo = async () => {
@@ -63,45 +122,120 @@ export default function App() {
     }
   };
 
+  // Order CRUD handlers
+  const handleUpdateOrderStatus = async (id: string, newStatus: OrderStatus) => {
+    await updateOrderStatus(id, newStatus);
+    setOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o))
+    );
+  };
+
+  const handleCreateOrder = async (orderData: Partial<Order>) => {
+    const payload = {
+      customerName: orderData.customerName || 'Khách lẻ',
+      phone: orderData.phone || '',
+      address: orderData.address || '',
+      note: orderData.note || '',
+      paymentMethod: orderData.paymentMethod || 'cod',
+      items: orderData.items || [],
+      totalAmount: orderData.totalAmount || 0,
+      shippingFee: orderData.shippingFee || 0,
+    };
+    const newOrder = await submitOrder(payload);
+    setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
+  };
+
+  const handleUpdateOrder = async (id: string, orderData: Partial<Order>) => {
+    await updateOrderData(id, orderData);
+    setOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, ...orderData } : o))
+    );
+  };
+
+  const handleDeleteOrder = async (id: string) => {
+    await deleteOrderById(id);
+    setOrders((prev) => prev.filter((o) => o.id !== id));
+  };
+
   return (
-      <CartProvider>
-        <div className="min-h-screen bg-slate-100/60 text-slate-900 flex flex-col font-sans antialiased selection:bg-blue-500 selection:text-white">
-          {/* Navigation Bar */}
-          <Navbar
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              sheetMeta={sheetMeta}
-              onRefreshData={handleRefreshData}
-              isRefreshing={isRefreshing}
-          />
+      <div className="min-h-screen bg-slate-100/60 text-slate-900 flex flex-col font-sans antialiased selection:bg-blue-500 selection:text-white">
+        {/* Navigation Bar */}
+        <Navbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            sheetMeta={sheetMeta}
+            onRefreshData={handleRefreshData}
+            isRefreshing={isRefreshing}
+            onNavigateToAdmin={() => setViewMode(viewMode === 'admin' ? 'client' : 'admin')}
+            viewMode={viewMode}
+        />
 
-          {/* Main Content Area */}
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-            <ClientHome
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                sheetMeta={sheetMeta}
-                onRefreshData={handleRefreshData}
-                isRefreshing={isRefreshing}
-            />
-          </main>
+        {/* Disconnection Warning Banner (Báo Đỏ khi mất kết nối, cam kết không fake data) */}
+        <FirebaseStatusBanner />
 
-          {/* Shopping Cart Drawer */}
-          <CartDrawer
-              onOrderSuccess={(order) => {
-                setCompletedOrder(order);
-              }}
-          />
+        {/* Main Content Area */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          {viewMode === 'admin' ? (
+              isAdminLoggedIn ? (
+                  <AdminDashboard
+                      orders={orders}
+                      onUpdateOrderStatus={handleUpdateOrderStatus}
+                      onCreateOrder={handleCreateOrder}
+                      onUpdateOrder={handleUpdateOrder}
+                      onDeleteOrder={handleDeleteOrder}
+                      onSwitchToClient={() => setViewMode('client')}
+                      isLoading={isOrdersLoading}
+                      onRefreshOrders={loadOrders}
+                  />
+              ) : (
+                  <AdminLogin
+                      onSuccess={() => setViewMode('admin')}
+                      onCancel={() => setViewMode('client')}
+                  />
+              )
+          ) : (
+              <ClientHome
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  sheetMeta={sheetMeta}
+                  onRefreshData={handleRefreshData}
+                  isRefreshing={isRefreshing}
+              />
+          )}
+        </main>
 
-          {/* Order Success Receipt Modal */}
-          <OrderSuccessModal
-              order={completedOrder}
-              onClose={() => setCompletedOrder(null)}
-          />
+        {/* Shopping Cart Drawer */}
+        <CartDrawer
+            onOrderSuccess={(order) => {
+              setCompletedOrder(order);
+              // Also prepend to orders list so admin sees it immediately
+              setOrders((prev) => [order, ...prev.filter((o) => o.id !== order.id)]);
+            }}
+        />
 
-          {/* Global Footer */}
-          <Footer sheetMeta={sheetMeta} />
-        </div>
-      </CartProvider>
+        {/* Order Success Receipt Modal */}
+        <OrderSuccessModal
+            order={completedOrder}
+            onClose={() => setCompletedOrder(null)}
+        />
+
+        {/* Global Footer */}
+        <Footer
+            sheetMeta={sheetMeta}
+            onNavigateToAdmin={() => setViewMode('admin')}
+        />
+      </div>
+  );
+}
+
+export default function App() {
+  return (
+      <FirebaseConnectionProvider>
+        <AuthProvider>
+          <CartProvider>
+            <MainApp />
+          </CartProvider>
+        </AuthProvider>
+      </FirebaseConnectionProvider>
   );
 }

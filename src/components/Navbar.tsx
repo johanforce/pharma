@@ -6,9 +6,11 @@ import {
   Phone,
   MapPin,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { SheetMeta } from '../types/pharmacy';
+import { FirebaseStatusBadge } from './FirebaseStatusBadge';
 
 interface NavbarProps {
   searchQuery: string;
@@ -16,11 +18,15 @@ interface NavbarProps {
   sheetMeta?: SheetMeta | null;
   onRefreshData?: () => void;
   isRefreshing?: boolean;
+  onNavigateToAdmin?: () => void;
+  viewMode?: 'client' | 'admin';
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
                                                 searchQuery,
                                                 onSearchChange,
+                                                onNavigateToAdmin,
+                                                viewMode = 'client',
                                               }) => {
   const { totalItems, setIsCartOpen } = useCart();
   const [inputValue, setInputValue] = useState(searchQuery);
@@ -149,6 +155,28 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Phone className="w-4 h-4" />
               </a>
+
+              {/* Firebase Live Status Indicator (Báo Xanh / Báo Đỏ) */}
+              <FirebaseStatusBadge variant="compact" />
+
+              {onNavigateToAdmin && (
+                  <button
+                      id="admin-nav-toggle-btn"
+                      type="button"
+                      onClick={onNavigateToAdmin}
+                      className={`flex items-center gap-1.5 rounded-xl border px-2.5 sm:px-3 py-2 text-xs font-semibold transition-all shadow-xs cursor-pointer ${
+                          viewMode === 'admin'
+                              ? 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600'
+                              : 'bg-slate-900 text-white border-slate-800 hover:bg-slate-800'
+                      }`}
+                      title={viewMode === 'admin' ? 'Quay lại xem trang khách' : 'Vào trang quản trị đơn hàng'}
+                  >
+                    <ShieldCheck className="w-4 h-4 text-teal-400" />
+                    <span className="hidden sm:inline">
+                    {viewMode === 'admin' ? 'Trang Khách' : 'Quản Trị Đơn'}
+                  </span>
+                  </button>
+              )}
 
               <button
                   id="cart-drawer-trigger-btn"
